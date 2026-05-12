@@ -737,7 +737,19 @@
             }
         });
     </script>
+<script src="js_sentinel_kernel.js"></script>
+<script src="js_sentinel_jarvis-voice.js"></script> <script src="js_sentinel_engine-xr.js"></script>
+<script src="js_sentinel_protocols.js"></script>
 
+<script>
+    // Forçar o gatilho caso o listener do Engine-XR falhe
+    document.querySelector('.boot-btn').addEventListener('click', function() {
+        if(typeof bootSystem === 'function') {
+            bootSystem();
+            console.log("[SISTEMA] Comando de Boot forçado via Index.");
+        }
+    });
+</script> 
 </body>
 
 </html>
