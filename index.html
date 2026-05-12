@@ -14,39 +14,25 @@
     <script>
         /* ════════════════════════════════════════════════════════
            MOBILE DETECTION
-           Pré-renderização XR — executa ANTES do A-Frame
         ════════════════════════════════════════════════════════ */
-
-        window.IS_MOBILE =
-            /Mobi|Android|iPhone|iPad/i.test(
-                navigator.userAgent
-            );
-
+        window.IS_MOBILE = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
         if (window.IS_MOBILE) {
-            document.documentElement.setAttribute(
-                'data-mobile',
-                'true'
-            );
+            document.documentElement.setAttribute('data-mobile', 'true');
         }
     </script>
 
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-
     <script src="https://unpkg.com/aframe-event-set-component@5.0.0/dist/aframe-event-set-component.min.js"></script>
+    
+    <script src="https://unpkg.com/aframe-particle-system-component@1.0.x/dist/aframe-particle-system-component.min.js" 
+            onerror="window.PARTICLE_FAILED=true"></script>
 
-    <script src="https://unpkg.com/aframe-particle-system-component@1.0.x/dist/aframe-particle-system-component.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
 
-    <link rel="preconnect"
-          href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700&display=swap"
-          rel="stylesheet">
-
-    <link rel="stylesheet"
-          href="css_sentinel_core.css">
-    <link rel="stylesheet"
-          href="css_sentinel_hud.css">
-    <link rel="stylesheet"
-          href="css_sentinel_fx.css">
+    <link rel="stylesheet" href="css_sentinel_core.css">
+    <link rel="stylesheet" href="css_sentinel_hud.css">
+    <link rel="stylesheet" href="css_sentinel_fx.css">
 
 </head>
 
@@ -57,102 +43,51 @@
             <div class="overlay-scan-line"></div>
             <h1>SENTINEL v6.0</h1>
             <p>Sincronizando Mielina... Estado: ALPHA</p>
-            <button class="boot-btn"
-                    id="master-boot-trigger">
+            <button class="boot-btn" id="master-boot-trigger">
                 INICIALIZAR PROTOCOLO
             </button>
-            <div class="status-msg"
-                 id="boot-status">Sinal de Clock: Estável</div>
+            <div class="status-msg" id="boot-status">Sinal de Clock: Estável</div>
         </div>
     </div>
 
     <div id="hud-2d">
         <div class="hud-corner top-left">
             <div class="label">SISTEMA</div>
-            <div class="value">SENTINEL_ALPHA_v6</div>
+            <div class="value">SENTINEL_v6_PRO</div>
         </div>
         <div class="hud-corner top-right">
             <div class="label">LATÊNCIA</div>
-            <div id="latency-value"
-                 class="value">0.0s</div>
+            <div id="latency-value" class="value">0.0s</div>
         </div>
         <div class="hud-corner bottom-left">
             <div class="label">BATERIA_CPF</div>
-            <div id="battery-value"
-                 class="value">100%</div>
+            <div id="battery-value" class="value">100%</div>
         </div>
     </div>
 
-    <a-scene embedded
-             renderer="antialias: true; colorManagement: true; exposure: 1.2;"
-             fog="type: exponential; color: #000; density: 0.12;">
-
+    <a-scene embedded renderer="antialias: true; colorManagement: true;" fog="type: exponential; color: #000; density: 0.12;">
+        
         <a-assets>
-            <a-mixin id="window-base"
-                     geometry="primitive: plane; width: 3.2; height: 1.8"
-                     material="shader: standard; transparent: true; opacity: 0.15; metalness: 0.8; roughness: 0.1; side: double; emissive: #00D4FF; emissiveIntensity: 0.1"
-                     event-set__mouseenter="material.opacity: 0.6; material.emissiveIntensity: 0.4"
-                     event-set__mouseleave="material.opacity: 0.15; material.emissiveIntensity: 0.1">
-            </a-mixin>
-
-            <a-mixin id="sigil-red"
-                     material="color: #FF4B00; emissive: #FF4B00; emissiveIntensity: 0.5"
-                     animation="property: rotation; to: 0 360 0; dur: 8000; loop: true; easing: linear">
+            <a-mixin id="window-base" 
+                     geometry="primitive: plane; width: 3.2; height: 1.8" 
+                     material="shader: standard; transparent: true; opacity: 0.15; side: double; emissive: #00D4FF; emissiveIntensity: 0.1">
             </a-mixin>
         </a-assets>
 
-        <a-entity id="reactor-core"
-                  position="0 1 -3.5">
-            <a-sphere radius="0.15"
-                      color="#00D4FF"
-                      material="emissive: #00D4FF; emissiveIntensity: 2"
-                      animation="property: scale; from: 1 1 1; to: 1.2 1.2 1.2; dur: 1000; direction: alternate; loop: true">
-            </a-sphere>
-            <a-torus radius="0.4"
-                     radius-tubular="0.01"
-                     color="#00D4FF"
-                     rotation="90 0 0"
-                     animation="property: rotation; to: 90 360 0; dur: 4000; loop: true; easing: linear">
-            </a-torus>
+        <a-entity id="reactor-core" position="0 1 -3.5">
+            <a-sphere radius="0.15" color="#00D4FF" material="emissive: #00D4FF; emissiveIntensity: 2"></a-sphere>
         </a-entity>
 
-        <a-entity id="mon-0"
-                  ghost-window="title: CORE_TERMINAL"
-                  mixin="window-base"
-                  position="0 1.6 -3"
-                  rotation="0 0 0">
-            <a-text value="CONEXÃO ESTABELECIDA\nAGUARDANDO INPUT..."
-                    align="center"
-                    color="#00D4FF"
-                    width="2.5"></a-text>
-        </a-entity>
-
-        <a-entity id="mon-1"
-                  ghost-window="title: BIO_FEEDBACK"
-                  mixin="window-base"
-                  position="-3.2 1.6 -1.8"
-                  rotation="0 45 0"></a-entity>
-
-        <a-entity id="mon-2"
-                  ghost-window="title: TELEMETRY"
-                  mixin="window-base"
-                  position="3.2 1.6 -1.8"
-                  rotation="0 -45 0"></a-entity>
+        <a-entity id="mon-0" ghost-window="title: CORE_TERMINAL" mixin="window-base" position="0 1.6 -3"></a-entity>
 
         <a-sky color="#000"></a-sky>
-        <a-entity id="particle-entity"
-                  position="0 2.25 -15"
-                  particle-system="preset: dust; color: #00D4FF; particleCount: 2000; size: 0.1"></a-entity>
+        
+        <a-entity id="particle-entity" position="0 2.25 -15" 
+                  particle-system="preset: dust; color: #00D4FF; particleCount: 1000"></a-entity>
 
-        <a-entity id="camera-rig"
-                  position="0 0 0">
-            <a-entity camera
-                      id="main-camera"
-                      look-controls
-                      position="0 1.6 0">
-                <a-cursor id="cursor"
-                          color="#00D4FF"
-                          raycaster="objects: [ghost-window], #reactor-core"></a-cursor>
+        <a-entity id="camera-rig">
+            <a-entity camera id="main-camera" look-controls position="0 1.6 0">
+                <a-cursor color="#00D4FF"></a-cursor>
             </a-entity>
         </a-entity>
 
@@ -165,49 +100,30 @@
 
     <script>
         /* ════════════════════════════════════════════════════════
-           PROTOCOLO DE SINCRONIZAÇÃO MASTER
-           Garante que o bootSystem() funcione em qualquer hardware.
+           PROTOCOLO DE DESBLOQUEIO IMEDIATO
         ════════════════════════════════════════════════════════ */
-        
-        document.addEventListener('DOMContentLoaded', () => {
-            const bootBtn = document.getElementById('master-boot-trigger');
-            const statusMsg = document.getElementById('boot-status');
+        document.addEventListener('DOMContentLoaded', function() {
+            var btn = document.getElementById('master-boot-trigger');
+            var overlay = document.getElementById('onboarding-overlay');
 
-            if (bootBtn) {
-                bootBtn.addEventListener('click', () => {
-                    statusMsg.innerText = "Sincronizando Motores...";
-                    console.log("[SENTINEL] Master Boot Invocado.");
-
-                    // 1. Inicializa o contexto de áudio (Necessário para JARVIS)
-                    if (typeof VoiceCore !== 'undefined' && VoiceCore.init) {
-                        VoiceCore.init();
-                    }
-
-                    // 2. Chama o boot do sistema principal
+            if (btn) {
+                btn.addEventListener('click', function() {
+                    console.log("Iniciando bypass de carregamento...");
+                    
+                    // Tenta rodar a função oficial se ela existir
                     if (typeof bootSystem === 'function') {
                         bootSystem();
-                    } else {
-                        // Fallback: Se o engine-xr.js falhar, removemos o overlay manualmente
-                        const overlay = document.getElementById('onboarding-overlay');
-                        if (overlay) {
-                            overlay.classList.add('fade-out');
-                            setTimeout(() => overlay.style.display = 'none', 1000);
-                        }
-                        console.warn("[PATCH] bootSystem não encontrado. Executando bypass de segurança.");
                     }
-
-                    // 3. Ativa protocolos de telemetria
-                    if (typeof checkLatency === 'function') {
-                        setInterval(checkLatency, 1000);
-                    }
-                    if (typeof updateBioStatus === 'function') {
-                        setInterval(updateBioStatus, 5000);
-                    }
+                    
+                    // Força o desaparecimento da tela de qualquer jeito (Anti-Travamento)
+                    overlay.style.opacity = '0';
+                    setTimeout(function() {
+                        overlay.style.display = 'none';
+                    }, 500);
                 });
             }
         });
     </script>
 
 </body>
-
 </html>
