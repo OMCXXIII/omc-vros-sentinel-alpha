@@ -1,0 +1,61 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   OMC VR-OS | SENTINEL CORE
+   Design Tokens, Resets & Base System
+   Fragmento 1/3
+═══════════════════════════════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700&display=swap');
+
+:root {
+    /* Sinais Primários */
+    --cyan:          #00D4FF;
+    --cyan-dim:      rgba(0, 212, 255, 0.6);
+    --cyan-border:   rgba(0, 212, 255, 0.25);
+    --cyan-glow:     0 0 12px rgba(0, 212, 255, 0.5), 0 0 30px rgba(0, 212, 255, 0.2);
+    --cyan-glow-sm:  0 0 6px  rgba(0, 212, 255, 0.4);
+
+    /* Alertas */
+    --alert:         #FF4B00;
+    --alert-dim:     rgba(255, 75, 0, 0.6);
+    --alert-glow:    0 0 15px rgba(255, 75, 0, 0.5);
+
+    /* Neutros & Backgrounds */
+    --bg-void:       #000000;
+    --bg-glass:      rgba(0, 10, 20, 0.7);
+    --bg-glass-heavy: rgba(0, 5, 10, 0.9);
+
+    /* Tipografia */
+    --font-mono:    'Share Tech Mono', monospace;
+    --font-display: 'Orbitron', sans-serif;
+
+    /* Timing & Easing */
+    --ease-out-expo: cubic-bezier(0.19, 1, 0.22, 1);
+    --transition-fast: 0.2s var(--ease-out-expo);
+    --transition-med:  0.5s var(--ease-out-expo);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    cursor: crosshair !important;
+}
+
+body {
+    background-color: var(--bg-void);
+    color: var(--cyan);
+    font-family: var(--font-mono);
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+}
+
+body.system-idle { background-color: #000205; }
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--cyan-border); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--cyan-dim); }
+
+[data-mobile="true"] #onboarding-overlay h1 { font-size: 1.8rem; }
+[data-mobile="true"] .overlay-inner { width: 90%; }
