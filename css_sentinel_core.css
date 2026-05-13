@@ -2,7 +2,7 @@
    OMC VR-OS | SENTINEL CORE — SOBERANIA OPERATIVA v6.0
    CSS SENTINEL CORE | Zero Latency Neuroadaptive Layer
    Arquitetura Cognitiva Imersiva + ENE (Estado Natural de Execução)
-   Fragmento 1/3 — CORE FOUNDATION UPGRADE
+   FRAGMENTO 1/3 — CORE FOUNDATION UPGRADE [CORREÇÃO Z-INDEX]
 ═══════════════════════════════════════════════════════════════════════════ */
 
 @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;500;700;900&display=swap');
@@ -224,7 +224,7 @@ body::before {
 
     pointer-events: none;
 
-    z-index: -3;
+    z-index: -3; /* Abaixo de todos os conteúdos */
 }
 
 body::after {
@@ -244,7 +244,7 @@ body::after {
 
     pointer-events: none;
 
-    z-index: -2;
+    z-index: -2; /* Abaixo da UI, acima do grid */
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -275,27 +275,27 @@ body.ene-active .hud-box {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   CAMADAS DE PROCESSAMENTO NEURAL
+   CAMADAS DE PROCESSAMENTO NEURAL (Hiearquia de Eixo Z)
 ═══════════════════════════════════════════════════════════════════════════ */
 
 .layer-focus {
     transform: var(--z-focus-distance) scale(var(--z-focus-scale));
     opacity: var(--z-focus-opacity);
-    z-index: 300;
+    z-index: 300; /* Prioridade Máxima de UI Interativa */
     box-shadow: var(--elevation-focus);
 }
 
 .layer-context {
     transform: var(--z-context-distance) scale(var(--z-context-scale));
     opacity: var(--z-context-opacity);
-    z-index: 200;
+    z-index: 200; /* Meio de Campo operacional */
     box-shadow: var(--elevation-context);
 }
 
 .layer-sovereign {
     transform: var(--z-sovereign-distance) scale(var(--z-sovereign-scale));
     opacity: var(--z-sovereign-opacity);
-    z-index: 100;
+    z-index: 100; /* Fundo do sistema/estatísticas */
     box-shadow: var(--elevation-sovereign);
 }
 
@@ -352,6 +352,7 @@ body.ene-active .hud-box {
     opacity: 0.6;
 
     pointer-events: none;
+    z-index: -1; /* Mantém o brilho interno atrás do conteúdo */
 }
 
 .glass-panel:hover,
@@ -366,6 +367,7 @@ body.ene-active .hud-box {
         0 0 80px rgba(0,212,255,0.05);
 
     transform: translateY(-2px);
+    z-index: 400; /* Elevação temporária no hover para evitar clipping */
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -534,7 +536,7 @@ button:active {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   OVERLAY SYSTEM
+   OVERLAY SYSTEM (Soberania Máxima)
 ═══════════════════════════════════════════════════════════════════════════ */
 
 #onboarding-overlay,
@@ -547,12 +549,11 @@ button:active {
     align-items: center;
     justify-content: center;
 
-    background:
-        rgba(0,0,0,0.92);
+    background: rgba(0,0,0,0.92);
 
     backdrop-filter: blur(20px);
 
-    z-index: 99999;
+    z-index: 99999; /* Soberania Absoluta */
 
     isolation: isolate;
 }
@@ -569,6 +570,8 @@ button:active {
     box-shadow:
         0 0 50px rgba(0,212,255,0.12),
         inset 0 0 0 1px rgba(255,255,255,0.02);
+    
+    z-index: 100000;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -654,5 +657,5 @@ button:active {
 
 /* ═══════════════════════════════════════════════════════════════════════════
    SOBERANIA OPERATIVA v6.0
-   ESTADO FINAL: IMPEDÂNCIA DE REALIDADE REDUZIDA
+   ESTADO FINAL: Z-INDEX NORMALIZADO / SEM CONFLITOS DE CAMADA
 ═══════════════════════════════════════════════════════════════════════════ */
