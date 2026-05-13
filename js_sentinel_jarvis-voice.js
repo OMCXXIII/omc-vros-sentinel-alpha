@@ -17,18 +17,19 @@
 ═══════════════════════════════════════════════════════════════════════════ */
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   GUARD — garante que o Bus está disponível
+   GUARD — Configuração e Barramento
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
 if (!window.SentinelBus) {
     console.error('[JARVIS] SentinelBus não encontrado. Carregue sentinel-bus.js antes de jarvis-voice.js.');
 }
 
+// Fallback de segurança para configurações de voz
+const JARVIS_CONFIG = window.JARVIS_CONFIG || { lang: 'pt-BR', neuralSampleRate: 32 };
+
 /* ═══════════════════════════════════════════════════════════════════════════
    1. VOICE CORE
    Domínio: MODULES / TTS Driver
-   Responsabilidade: síntese de voz e feedback de áudio.
-   Não conhece SYSTEM_STATE, DOM 3D ou outros módulos de Cognição.
 ═══════════════════════════════════════════════════════════════════════════ */
 
 const VoiceCore = {
@@ -46,15 +47,10 @@ const VoiceCore = {
         }, 1200);
     },
 
-    /* ─────────────────────────────────────────────────
-       speak(text)
-       Lê o texto via Web Speech API TTS.
-       Ouve também o evento jarvis:speak do Bus para
-       que qualquer módulo possa solicitar fala sem
-       importar VoiceCore diretamente.
-    ───────────────────────────────────────────────── */
     speak: function (text) {
         if (!this.synth) return;
+        
+        // Cancela falas anteriores para evitar sobreposição em comandos rápidos
         if (this.synth.speaking) this.synth.cancel();
 
         const utter    = new SpeechSynthesisUtterance(text);
@@ -66,11 +62,6 @@ const VoiceCore = {
         this.synth.speak(utter);
     },
 
-    /* ─────────────────────────────────────────────────
-       playFeedback(type)
-       Tones procedurais via Web Audio API.
-       Tipos: 'confirm' | 'warning' | 'mission' | 'hover'
-    ───────────────────────────────────────────────── */
     playFeedback: function (type) {
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         const osc      = audioCtx.createOscillator();
@@ -104,11 +95,6 @@ const VoiceCore = {
     }
 };
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   VoiceCore ouve o Bus — qualquer módulo pode solicitar
-   fala ou feedback sem conhecer VoiceCore diretamente.
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-
 if (window.SentinelBus) {
     SentinelBus.on('jarvis:speak',    ({ text }) => VoiceCore.speak(text));
     SentinelBus.on('jarvis:feedback', ({ type }) => VoiceCore.playFeedback(type));
@@ -117,8 +103,6 @@ if (window.SentinelBus) {
 /* ═══════════════════════════════════════════════════════════════════════════
    2. RAG ENGINE
    Domínio: COGNITION / Knowledge Base
-   Responsabilidade: recuperação local de patches cognitivos.
-   Sem dependências externas — função pura de lookup.
 ═══════════════════════════════════════════════════════════════════════════ */
 
 const RAG_ENGINE = {
@@ -148,6 +132,10 @@ const RAG_ENGINE = {
             patch: 'Não busque produtividade, busque cadência. Calibre seu ciclo de clock.',
             fonte: 'Vol. 2, Aula 2'
         },
+        'produtividade': {
+            patch: 'Não busque produtividade, busque cadência. Calibre seu ciclo de clock.',
+            fonte: 'Vol. 2, Aula 2'
+        },
         'estou ansioso': {
             patch: 'Razão Desafio/Habilidade acima do limite operacional. Reduza escopo imediatamente.',
             fonte: 'Vol. 4, Aula 4'
@@ -170,18 +158,14 @@ const RAG_ENGINE = {
 /* ═══════════════════════════════════════════════════════════════════════════
    3. INTENT PROCESSOR
    Domínio: COGNITION / Speech-to-Action
-   Responsabilidade: classificar intenções e emitir eventos no Bus.
-   NÃO chama DOM 3D, NÃO escreve em SYSTEM_STATE diretamente.
-   Emite jarvis:intent → outros domínios reagem.
 ═══════════════════════════════════════════════════════════════════════════ */
 
 const IntentProcessor = {
 
     dictionary: {
-
         navigation: {
             patterns: ['navegar para', 'focar', 'ir para', 'monitor'],
-            action: (val) => {
+            action: (text) => {
                 const map = {
                     'biometria':    '1',
                     'arquétipos':   '2',
@@ -190,7 +174,15 @@ const IntentProcessor = {
                     'mielinização': '4',
                     'soberania':    '5'
                 };
-                const key = map[val] || val;
+                // Busca se algum dos destinos está presente na frase
+                let key = null;
+                for (let target in map) {
+                    if (text.includes(target)) {
+                        key = map[target];
+                        break;
+                    }
+                }
+                if (!key) key = text.split(' ').pop(); // Fallback palavra final
                 SentinelBus.emit('jarvis:intent', { intent: 'navigate', value: key });
             }
         },
@@ -205,7 +197,6 @@ const IntentProcessor = {
                     SentinelBus.emit('jarvis:intent', { intent: 'system_state', value: 'sleep' });
                 }
                 if (val.includes('terminal')) {
-                    /* Terminal focus é UI pura — evento direto de UI */
                     SentinelBus.emit('ui:mode', { mode: 'terminal-focus', active: true });
                 }
             }
@@ -216,7 +207,6 @@ const IntentProcessor = {
         const text = transcript.toLowerCase();
         console.log(`[JARVIS] Analisando Intenção: "${text}"`);
 
-        /* Registra input no Bus — StateStore reage via telemetry:input */
         SentinelBus.emit('telemetry:input', {});
 
         /* OVERRIDE */
@@ -251,8 +241,7 @@ const IntentProcessor = {
         /* DICTIONARY DISPATCH */
         for (const [category, obj] of Object.entries(this.dictionary)) {
             if (obj.patterns.some(p => text.includes(p))) {
-                const target = text.split(' ').pop();
-                obj.action(target);
+                obj.action(text);
                 SentinelBus.emit('jarvis:feedback', { type: 'confirm' });
                 return;
             }
@@ -266,8 +255,6 @@ const IntentProcessor = {
 /* ═══════════════════════════════════════════════════════════════════════════
    4. JARVIS AI
    Domínio: COGNITION / AI Dispatch
-   Responsabilidade: RAG + fallback. Emite jarvis:reply → UI e Voice reagem.
-   NÃO acessa DOM diretamente — emite eventos.
 ═══════════════════════════════════════════════════════════════════════════ */
 
 const JARVIS_AI = {
@@ -278,10 +265,10 @@ const JARVIS_AI = {
         /* IDENTIDADE */
         if (lower.includes('quem é você')) {
             const latency = window.StateStore
-                ? StateStore.get('telemetry.latency')
-                : (window.SYSTEM_STATE?.telemetry?.latency ?? '?');
+                ? StateStore.get('ops.latency')
+                : (window.SYSTEM_STATE?.ops?.latency ?? '?');
 
-            const reply = `Sou o Sentinel v6.0. Motor de execução do SBL. Latência atual: ${latency}s.`;
+            const reply = `Sou o Sentinel v6.0. Motor de execução do SBL. Latência atual: ${latency}.`;
             SentinelBus.emit('jarvis:reply', { text: reply, source: 'identity' });
             return;
         }
@@ -300,20 +287,13 @@ const JARVIS_AI = {
     }
 };
 
-/* ─────────────────────────────────────────────────
-   JARVIS AI ouve jarvis:transcript (do IntentProcessor)
-   e jarvis:reply propaga para VoiceCore e nexus-display.
-───────────────────────────────────────────────── */
-
 if (window.SentinelBus) {
     SentinelBus.on('jarvis:transcript', ({ text }) => {
         JARVIS_AI.dispatch(text);
     });
 
     SentinelBus.on('jarvis:reply', ({ text }) => {
-        /* Fala via VoiceCore */
         VoiceCore.speak(text);
-        /* Atualiza display principal via evento UI */
         SentinelBus.emit('ui:nexus-update', { text: `IA_REPLY:\n${text}` });
     });
 }
@@ -321,8 +301,6 @@ if (window.SentinelBus) {
 /* ═══════════════════════════════════════════════════════════════════════════
    5. VOICE LISTENER
    Domínio: MODULES / STT Driver
-   Responsabilidade: captura de voz e entrega de transcript ao Bus.
-   Gerencia seu próprio ciclo de vida — init acionado por boot:complete.
 ═══════════════════════════════════════════════════════════════════════════ */
 
 const VoiceListener = {
@@ -340,21 +318,18 @@ const VoiceListener = {
 
         this.recognition = new SpeechRecognition();
         this.recognition.lang           = JARVIS_CONFIG.lang;
-        this.recognition.continuous     = false;
+        this.recognition.continuous      = false;
         this.recognition.interimResults = false;
 
         this.recognition.onstart = () => {
             this.isListening = true;
             document.body.classList.add('jarvis-listening');
             SentinelBus.emit('jarvis:feedback', { type: 'confirm' });
-            /* Atualiza estado de escuta via Bus */
             SentinelBus.emit('state:change', { key: 'ui.isListening', val: true, prev: false });
         };
 
         this.recognition.onresult = (event) => {
             const transcript = event.results[0][0].transcript;
-            /* Entrega o transcript ao IntentProcessor via parse direto
-               (são do mesmo domínio COGNITION — chamada interna válida) */
             IntentProcessor.parse(transcript);
         };
 
@@ -384,107 +359,76 @@ const VoiceListener = {
 };
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   6. PROTOCOLO HANDLERS — reações a jarvis:intent
-   Domínio: COGNITION / Protocol Executor
-   Cada handler emite eventos no Bus em vez de operar diretamente
-   no DOM 3D ou no SYSTEM_STATE.
+   6. PROTOCOLO HANDLERS
 ═══════════════════════════════════════════════════════════════════════════ */
 
 if (window.SentinelBus) {
 
-    /* ── OVERRIDE ──────────────────────────────────────────────────────── */
-    SentinelBus.on('jarvis:intent', ({ intent }) => {
-        if (intent !== 'override') return;
-
-        SentinelBus.emit('jarvis:speak',    { text: 'Protocolo Override ativo. Purgando distrações.' });
-        SentinelBus.emit('jarvis:feedback', { type: 'warning' });
-
-        /* Estado operacional */
-        SentinelBus.emit('state:change', { key: 'ops.override', val: true, prev: false });
-
-        /* Visual no body */
-        SentinelBus.emit('ui:mode', { mode: 'system-glitch',  active: true });
-        SentinelBus.emit('ui:mode', { mode: 'override-active', active: true });
-
-        /* Material XR — engine-xr.js aplica */
-        SentinelBus.emit('xr:material', {
-            target:    'mon-0',
-            emissive:  '#FF4B00',
-            intensity: 1.0
-        });
-
-        /* Isolamento de atenção — engine-xr.js suprime periféricos */
-        SentinelBus.emit('xr:focus-isolate', { opacity: 0.02, blur: 10 });
-    });
-
-    /* ── MISSION LOCK ──────────────────────────────────────────────────── */
     SentinelBus.on('jarvis:intent', ({ intent, value }) => {
-        if (intent !== 'mission') return;
-
-        if (!value || value.length < 2) {
-            SentinelBus.emit('jarvis:speak', { text: 'Missão inválida.' });
-            return;
+        
+        /* OVERRIDE */
+        if (intent === 'override') {
+            SentinelBus.emit('jarvis:speak',    { text: 'Protocolo Override ativo. Purgando distrações.' });
+            SentinelBus.emit('jarvis:feedback', { type: 'warning' });
+            SentinelBus.emit('state:change',    { key: 'ops.override', val: true, prev: false });
+            SentinelBus.emit('ui:mode',         { mode: 'system-glitch',   active: true });
+            SentinelBus.emit('ui:mode',         { mode: 'override-active', active: true });
+            SentinelBus.emit('xr:material',     { target: 'mon-0', emissive: '#FF4B00', intensity: 1.0 });
+            SentinelBus.emit('xr:focus-isolate', { opacity: 0.02, blur: 10 });
         }
 
-        /* Persiste e notifica via Bus — StateStore e UI reagem */
-        SentinelBus.emit('mission:lock', { mission: value });
-        SentinelBus.emit('jarvis:feedback', { type: 'mission' });
-        SentinelBus.emit('jarvis:speak',    { text: `Missão fixada. Objetivo principal: ${value}` });
-    });
+        /* MISSION LOCK */
+        if (intent === 'mission') {
+            if (!value || value.length < 2) {
+                SentinelBus.emit('jarvis:speak', { text: 'Missão inválida.' });
+                return;
+            }
+            SentinelBus.emit('mission:lock',     { mission: value });
+            SentinelBus.emit('jarvis:feedback', { type: 'mission' });
+            SentinelBus.emit('jarvis:speak',    { text: `Missão fixada. Objetivo principal: ${value}` });
+        }
 
-    /* ── DEEP FLOW ─────────────────────────────────────────────────────── */
-    SentinelBus.on('jarvis:intent', ({ intent }) => {
-        if (intent !== 'deepflow') return;
+        /* DEEP FLOW */
+        if (intent === 'deepflow') {
+            SentinelBus.emit('xr:deepflow', { active: true });
+            SentinelBus.emit('ui:mode',     { mode: 'ene-active', active: true });
+            SentinelBus.emit('jarvis:speak', { text: 'Deep Flow operacional.' });
+        }
 
-        SentinelBus.emit('xr:deepflow', { active: true });
-        SentinelBus.emit('ui:mode',     { mode: 'ene-active', active: true });
-        SentinelBus.emit('jarvis:speak', { text: 'Deep Flow operacional.' });
-    });
+        /* FOCUS PROTOCOL */
+        if (intent === 'focus') {
+            SentinelBus.emit('ui:mode',          { mode: 'focus-clipping', active: true });
+            SentinelBus.emit('xr:focus-isolate', { opacity: 0.05, blur: 6 });
+            SentinelBus.emit('jarvis:speak',     { text: 'Focus Clipping ativado.' });
+        }
 
-    /* ── FOCUS PROTOCOL ────────────────────────────────────────────────── */
-    SentinelBus.on('jarvis:intent', ({ intent }) => {
-        if (intent !== 'focus') return;
+        /* NAVIGATE */
+        if (intent === 'navigate') {
+            if (typeof navigate === 'function') navigate(value);
+        }
 
-        SentinelBus.emit('ui:mode',          { mode: 'focus-clipping', active: true });
-        SentinelBus.emit('xr:focus-isolate', { opacity: 0.05, blur: 6 });
-        SentinelBus.emit('jarvis:speak',     { text: 'Focus Clipping ativado.' });
-    });
-
-    /* ── NAVIGATE ──────────────────────────────────────────────────────── */
-    SentinelBus.on('jarvis:intent', ({ intent, value }) => {
-        if (intent !== 'navigate') return;
-        /* navigate() pode continuar sendo chamado diretamente por enquanto
-           — é uma função de UI sem acoplamento de estado */
-        if (typeof navigate === 'function') navigate(value);
-    });
-
-    /* ── SYSTEM STATE (shadow / sleep) ────────────────────────────────── */
-    SentinelBus.on('jarvis:intent', ({ intent, value }) => {
-        if (intent !== 'system_state') return;
-        if (value === 'shadow' && typeof toggleShadowMode === 'function') toggleShadowMode();
-        if (value === 'sleep'  && typeof toggleSleepMode  === 'function') toggleSleepMode();
+        /* SYSTEM STATE */
+        if (intent === 'system_state') {
+            if (value === 'shadow' && typeof toggleShadowMode === 'function') toggleShadowMode();
+            if (value === 'sleep'  && typeof toggleSleepMode  === 'function') toggleSleepMode();
+        }
     });
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   7. MISSION LOCK — PERSISTÊNCIA NO localStorage
-   StateStore.on(mission:lock) já persiste em ops.mission.
-   Este handler complementa: escreve no localStorage e atualiza o DOM 2D.
+   7. MISSION LOCK — PERSISTÊNCIA
 ═══════════════════════════════════════════════════════════════════════════ */
 
 if (window.SentinelBus) {
     SentinelBus.on('mission:lock', ({ mission }) => {
         localStorage.setItem('OMC_MISSION_LOCK', mission);
-
         const missionEl = document.getElementById('mission-lock');
-        if (missionEl) missionEl.innerText = `MISSION: ${mission.toUpperCase()}`;
+        if (missionEl) missionEl.textContent = `MISSION: ${mission.toUpperCase()}`;
     });
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   8. BOOT — CICLO DE VIDA AUTÔNOMO
-   VoiceCore e VoiceListener se inicializam ao receber boot:complete.
-   Elimina a dependência de kernel.js chamar VoiceCore.init() externamente.
+   8. BOOT — CICLO DE VIDA
 ═══════════════════════════════════════════════════════════════════════════ */
 
 if (window.SentinelBus) {
@@ -497,20 +441,16 @@ if (window.SentinelBus) {
 
 /* ═══════════════════════════════════════════════════════════════════════════
    9. RESTORE MISSION LOCK
-   Restaura missão do localStorage na carga da página.
-   Emite mission:lock → StateStore e UI reagem uniformemente.
 ═══════════════════════════════════════════════════════════════════════════ */
 
 window.addEventListener('load', () => {
     const savedMission = localStorage.getItem('OMC_MISSION_LOCK');
-    if (savedMission) {
+    if (savedMission && window.SentinelBus) {
         SentinelBus.emit('mission:lock', { mission: savedMission });
         SentinelBus.emit('mission:restored', { mission: savedMission });
     }
 });
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   SENTINEL JARVIS-VOICE v6.1
-   DOMÍNIO: COGNITION + MODULES
-   CANAL: SentinelBus — zero acoplamento direto com ENGINE-XR ou STATE
+   SENTINEL JARVIS-VOICE v6.1 | DOMÍNIO: COGNITION + MODULES
 ═══════════════════════════════════════════════════════════════════════════ */
