@@ -25,7 +25,8 @@
     <script src="https://unpkg.com/aframe-particle-system-component@1.0.x/dist/aframe-particle-system-component.min.js"></script>
 
     <script src="sentinel-bus.js"></script>
-    <script src="sentinel-core.js"></script> <script src="js_sentinel_engine-xr.js"></script>
+    <script src="sentinel-core.js"></script> 
+    <script src="js_sentinel_engine-xr.js"></script>
     <script src="js_sentinel_jarvis-voice.js"></script>
     <script src="js_sentinel_protocols.js"></script>
 
@@ -57,7 +58,7 @@
         </div>
         <div class="hud-corner top-right">
             <div class="label">LATÊNCIA</div>
-            <div id="latency-value" class="value">0.0s</div>
+            <div id="latency-value" class="value">0.0ms</div>
         </div>
         <div class="hud-corner bottom-left">
             <div class="label">BATERIA_CPF</div>
@@ -74,7 +75,7 @@
             </a-mixin>
         </a-assets>
 
-        <a-light type="ambient"     color="#0a1a2a" intensity="0.6"></a-light>
+        <a-light type="ambient" color="#0a1a2a" intensity="0.6"></a-light>
         <a-light type="directional" color="#00D4FF" intensity="0.3" position="0 4 -2"></a-light>
 
         <a-entity id="reactor-core" position="0 1 -3.5">
@@ -84,23 +85,23 @@
         </a-entity>
 
         <a-entity id="mon-0" class="ghost-window" ghost-window="title: CORE_TERMINAL" mixin="window-base" position="0 1.6 -3">
-            <a-text id="nexus-display" value="SENTINEL ONLINE&#10;AGUARDANDO INPUT..." color="#00D4FF" width="3" wrap-count="38" position="-1.4 0.5 0.01" align="left" font="mozillavr"></a-text>
+            <a-text id="nexus-display" value="SENTINEL ONLINE\nAGUARDANDO INPUT..." color="#00D4FF" width="3" wrap-count="38" position="-1.4 0.5 0.01" align="left" font="mozillavr"></a-text>
         </a-entity>
 
         <a-entity id="mon-1l" class="ghost-window" ghost-window="title: DIAGNOSTICO" mixin="window-base" position="-3.2 1.6 -2.8" rotation="0 30 0">
-            <a-text value="DIAGNOSTICO_LOG&#10;Sem eventos críticos." color="#00D4FF" width="3" wrap-count="34" position="-1.4 0.5 0.01" align="left" font="mozillavr"></a-text>
+            <a-text value="DIAGNOSTICO_LOG\nSem eventos críticos." color="#00D4FF" width="3" wrap-count="34" position="-1.4 0.5 0.01" align="left" font="mozillavr"></a-text>
         </a-entity>
 
         <a-entity id="mon-1r" class="ghost-window" ghost-window="title: ROOT_LIB" mixin="window-base" position="3.2 1.6 -2.8" rotation="0 -30 0">
-            <a-text value="ROOT_LIBRARY&#10;Referências técnicas." color="#00D4FF" width="3" wrap-count="34" position="-1.4 0.5 0.01" align="left" font="mozillavr"></a-text>
+            <a-text value="ROOT_LIBRARY\nReferências técnicas." color="#00D4FF" width="3" wrap-count="34" position="-1.4 0.5 0.01" align="left" font="mozillavr"></a-text>
         </a-entity>
 
         <a-entity id="mon-2l" class="ghost-window" ghost-window="title: DATA_STREAM" mixin="window-base" position="-5.8 1.6 -1.8" rotation="0 55 0">
-            <a-text value="DATA_STREAM&#10;Fluxo bruto ativo." color="#00FF41" width="3" wrap-count="34" position="-1.4 0.5 0.01" align="left" font="mozillavr"></a-text>
+            <a-text value="DATA_STREAM\nFluxo bruto ativo." color="#00FF41" width="3" wrap-count="34" position="-1.4 0.5 0.01" align="left" font="mozillavr"></a-text>
         </a-entity>
 
         <a-entity id="mon-2r" class="ghost-window" ghost-window="title: CLOCK_ATC" mixin="window-base" position="5.8 1.6 -1.8" rotation="0 -55 0">
-            <a-text id="clock-display" value="CLOCK_ATC&#10;Sinal Estável." color="#00FF41" width="3" wrap-count="34" position="-1.4 0.5 0.01" align="left" font="mozillavr"></a-text>
+            <a-text id="clock-display" value="CLOCK_ATC\nSinal Estável." color="#00FF41" width="3" wrap-count="34" position="-1.4 0.5 0.01" align="left" font="mozillavr"></a-text>
         </a-entity>
 
         <a-sky color="#000010"></a-sky>
@@ -122,35 +123,46 @@
                 btn.addEventListener('click', function() {
                     console.log("SENTINEL: Executando boot de soberania...");
 
-                    if (typeof bootSystem === 'function') {
-                        bootSystem();
-                    } else {
-                        console.error("[SENTINEL] bootSystem não encontrado — verifique js_sentinel_engine-xr.js");
+                    // 1. Notifica o Barramento que o Boot ocorreu (Libera Jarvis e Engine)
+                    if (window.SentinelBus) {
+                        window.SentinelBus.emit('boot:complete', { timestamp: Date.now() });
                     }
 
-                    window.SENTINEL_BOOTED = true;
+                    // 2. Chama inicialização do Engine-XR se existir
+                    if (typeof bootSystem === 'function') {
+                        bootSystem();
+                    }
 
-                    overlay.style.transition = 'opacity 1s ease, filter 1s ease';
+                    // 3. Atualiza estado global
+                    window.SENTINEL_BOOTED = true;
+                    document.body.classList.remove('system-idle');
+                    document.body.classList.add('system-ready');
+
+                    // 4. Efeito visual de saída
+                    overlay.style.transition = 'opacity 1s ease, filter 1s ease, visibility 1s';
                     overlay.style.opacity    = '0';
                     overlay.style.filter     = 'blur(20px)';
+                    overlay.style.pointerEvents = 'none';
 
                     setTimeout(() => {
                         overlay.style.display = 'none';
-                        console.log("SENTINEL: Overlay purgado.");
+                        console.log("SENTINEL: Overlay purgado. Interface XR liberada.");
                     }, 1000);
                 });
             }
 
-            // TECLA 'J' - Override
+            // ATALHOS DE TECLADO OPERACIONAIS
             window.addEventListener('keydown', function(e) {
+                // Tecla 'J' - Ativa Jarvis VoiceListener
                 if (e.key.toLowerCase() === 'j') {
                     if (typeof VoiceListener !== 'undefined') {
                         VoiceListener.start();
+                        console.log("[INPUT] VoiceListener ativado via Teclado.");
                     }
                 }
             });
 
-            // CLOCK ATC
+            // LOOP DE TELEMETRIA (CLOCK ATC & SESSION)
             setInterval(() => {
                 const clockEl = document.getElementById('clock-display');
                 if (!clockEl || !window.SENTINEL_BOOTED) return;
@@ -158,12 +170,20 @@
                 const now = new Date();
                 const ts = now.toTimeString().slice(0, 8);
                 
-                // SYSTEM_STATE agora é gerido pelo sentinel-core.js
-                const elapsed = typeof StateStore !== 'undefined' 
-                    ? Math.floor((Date.now() - StateStore.get('telemetry.startTime')) / 1000)
-                    : 0;
+                // Cálculo de tempo de sessão via StateStore (sentinel-core)
+                let elapsed = 0;
+                if (typeof StateStore !== 'undefined') {
+                    const startTime = StateStore.get('telemetry.startTime');
+                    elapsed = Math.floor((Date.now() - startTime) / 1000);
+                }
                     
-                clockEl.setAttribute('value', 'CLOCK_ATC\n' + ts + '\nSessão: ' + elapsed + 's');
+                clockEl.setAttribute('value', `CLOCK_ATC\n${ts}\nSessão: ${elapsed}s`);
+                
+                // Sincroniza HUD 2D de Latência (Exemplo de interface cruzada)
+                const latEl = document.getElementById('latency-value');
+                if(latEl && typeof StateStore !== 'undefined') {
+                    latEl.textContent = StateStore.get('ops.latency') || '0.0ms';
+                }
             }, 1000);
         });
     </script>
