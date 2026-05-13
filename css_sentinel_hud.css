@@ -1,126 +1,159 @@
 /* ═══════════════════════════════════════════════════════════════════════════
    OMC VR-OS | SENTINEL CORE — HUD & INTERFACE AUTHORITY v6.0
-   CSS SENTINEL HUD | Camada de Visualização e Telemetria
-   FRAGMENTO CORRIGIDO: Visibilidade e Safe-Boot
+   ENRIQUECIMENTO DE SOBERANIA: Optical Depth & Biometric Feedback
+   FRAGMENTO: EXECUTION LAYER
 ═══════════════════════════════════════════════════════════════════════════ */
 
-@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;500;700;900&display=swap');
-
 :root {
-    --cyan:                 #00D4FF;
-    --green-flow:           #00FF41;
-    --green-flow-glow:      0 0 15px rgba(0, 255, 65, 0.4);
-    --font-mono:            'Share Tech Mono', monospace;
+    /* Refinamento de Matiz para HDR */
+    --cyan-hyper:           #00f2ff;
+    --green-glitch:         #00ffb3;
+    --hud-glass-bg:         rgba(0, 8, 12, 0.72);
+    --neural-pulse-speed:   2.4s;
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   SAFE-BOOT OVERLAY
-   Impede a "cegueira" inicial até o SENTINEL_BOOTED
+   REPRESENTAÇÃO ESPACIAL DO HUD (Z-AXIS)
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
 #hud-2d {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
     pointer-events: none;
     z-index: 9999;
-    opacity: 0; /* Invisível por padrão */
-    transition: opacity 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0;
+    
+    /* Simulação de curvatura de lente anamórfica */
+    perspective: 1200px;
+    transform-style: preserve-3d;
+    
+    transition: 
+        opacity 1.8s cubic-bezier(0.16, 1, 0.3, 1),
+        filter 0.5s ease;
 }
 
-/* Só libera a visão quando o Kernel injetar esta classe */
+/* Estado Ativo: Injeção de Aberração Cromática e Profundidade */
 .sentinel-active #hud-2d {
     opacity: 1;
+    animation: bootScan 0.8s ease-out forwards;
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   MODO SOMBRA | FOCUS CLIPPING (CORRIGIDO)
-   Ajustado para evitar blackout total indesejado
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-
-#hud-2d::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: transparent;
-    transition: background 0.8s ease, backdrop-filter 0.8s ease;
-    z-index: -1;
-}
-
-/* A aplicação do blackout agora exige DUAS condições:
-   1. O modo sombra estar ativo.
-   2. O sistema já ter passado pelo boot. */
-.sentinel-active.shadow-mode #hud-2d::after {
-    background: radial-gradient(
-        circle at center,
-        transparent 15%, /* Aumentado de 8% para 15% para evitar túnel muito estreito */
-        rgba(0, 0, 0, 0.92) 85% /* Suavizado de 0.96 para 0.92 */
-    );
-    backdrop-filter: blur(8px); /* Reduzido de 12px para 8px para manter legibilidade */
-    pointer-events: all;
-}
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   ELEMENTOS DO HUD
+   GLASS PANEL ENHANCEMENT (AERO-GLASS v2)
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
 .hud-corner {
     position: absolute;
-    padding: 15px;
+    background: var(--hud-glass-bg);
     border: 1px solid var(--cyan-border);
-    background: rgba(0, 20, 30, 0.4);
-    backdrop-filter: blur(5px);
-    transition: all 0.5s ease;
-}
-
-.shadow-mode .hud-corner:not(.focus-node) {
-    opacity: 0.1 !important; /* Mantido baixo para foco, mas não zero */
-    filter: grayscale(1) blur(4px) brightness(0.3);
-    transform: scale(0.95);
-}
-
-.focus-node {
-    opacity: 1 !important;
-    border-color: var(--green-flow) !important;
-    box-shadow: 0 0 25px rgba(0, 255, 65, 0.2);
-    transform: scale(1.02);
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    box-shadow: 
+        inset 0 0 20px rgba(0, 212, 255, 0.05),
+        0 10px 30px rgba(0, 0, 0, 0.5);
+    
+    /* Geometria de interface militarizada */
+    clip-path: polygon(
+        0 0, 100% 0, 100% calc(100% - 15px), 
+        calc(100% - 15px) 100%, 0 100%
+    );
+    
+    will-change: transform, opacity;
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   LOW POWER MODE (SAFEGUARD)
+   BIOMETRIC TELEMETRY: NEURAL PULSE
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
-.low-power-mode * {
-    animation: none !important;
-    transition: none !important;
-    text-shadow: none !important;
-    box-shadow: none !important;
+.telemetry-node {
+    position: relative;
+    overflow: hidden;
 }
 
-.low-power-mode #hud-2d::after {
-    display: none; /* Desativa sombras pesadas em economia de energia */
+.telemetry-node::before {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: linear-gradient(
+        90deg, 
+        transparent, 
+        rgba(0, 212, 255, 0.1), 
+        transparent
+    );
+    animation: scanline var(--neural-pulse-speed) infinite linear;
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   TERMINAL INPUT AREA
+   TERMINAL & CMD ENRICHMENT
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.terminal-window {
+    border-left: 3px solid var(--green-flow);
+    background: linear-gradient(
+        135deg, 
+        rgba(0, 255, 65, 0.03) 0%, 
+        transparent 100%
+    );
+}
 
 .cmd-input {
-    width: 100%;
-    border: none;
-    outline: none;
-    background: transparent;
-    color: var(--green-flow);
-    font-family: var(--font-mono);
-    letter-spacing: 0.08em;
-    text-shadow: var(--green-flow-glow);
+    caret-shape: block;
+    animation: caretPulse 1s steps(2, start) infinite;
+    text-transform: uppercase;
 }
 
-.cmd-input::placeholder {
-    color: rgba(0, 255, 65, 0.3);
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   ADVANCED ANIMATION ENGINES
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+@keyframes bootScan {
+    0% {
+        transform: scale(1.1) rotateX(10deg);
+        filter: brightness(5) blur(20px);
+    }
+    100% {
+        transform: scale(1) rotateX(0deg);
+        filter: brightness(1) blur(0px);
+    }
+}
+
+@keyframes scanline {
+    0% { left: -100%; }
+    100% { left: 100%; }
+}
+
+@keyframes caretPulse {
+    to { visibility: hidden; }
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   SITUATIONAL OVERLAYS (NEUROSIGNALS)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/* Focus Mode: Clipping Pulvinar do Tálamo */
+.focus-mode #hud-2d::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+        circle at center,
+        transparent 20%,
+        rgba(0, 0, 0, 0.8) 100%
+    );
+    mix-blend-mode: multiply;
+    pointer-events: none;
+}
+
+/* Emergency Protocol: Alerta de Stress Sitémico */
+.system-emergency .hud-corner {
+    border-color: #ff3e3e !important;
+    background: rgba(40, 0, 0, 0.6);
+    animation: emergencyPulse 0.5s infinite alternate;
+}
+
+@keyframes emergencyPulse {
+    from { box-shadow: 0 0 10px rgba(255, 62, 62, 0.2); }
+    to { box-shadow: 0 0 30px rgba(255, 62, 62, 0.5); }
 }
