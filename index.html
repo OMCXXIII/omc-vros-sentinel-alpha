@@ -13,14 +13,20 @@
         if (window.IS_MOBILE) {
             document.documentElement.setAttribute('data-mobile', 'true');
         }
+
+        /* ════════════════════════════════════════════════════════
+           BOOT GATE — impede updateQuantumProximity de manipular
+           object3D.scale antes do boot completar, o que cancelava
+           a animação de entrada das ghost-windows (Correção #5)
+        ════════════════════════════════════════════════════════ */
+        window.SENTINEL_BOOTED = false;
     </script>
 
-    <!-- ── CORREÇÃO: A-Frame deve carregar ANTES de qualquer script que use AFRAME.registerComponent ── -->
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <script src="https://unpkg.com/aframe-event-set-component@5.0.0/dist/aframe-event-set-component.min.js"></script>
     <script src="https://unpkg.com/aframe-particle-system-component@1.0.x/dist/aframe-particle-system-component.min.js"></script>
 
-    <!-- ── CORREÇÃO: engine-xr registra o componente ghost-window — deve vir ANTES da cena A-Frame ── -->
+    <!-- kernel e engine-xr no head para registrar ghost-window antes da cena -->
     <script src="js_sentinel_kernel.js"></script>
     <script src="js_sentinel_engine-xr.js"></script>
 
@@ -61,7 +67,12 @@
         </div>
     </div>
 
-    <a-scene embedded renderer="antialias: true; colorManagement: true;" fog="type: exponential; color: #000; density: 0.12;">
+    <!--
+        FIX #C — Fog reduzido de 0.12 para 0.03.
+        Densidade 0.12 tornava tudo invisível a z=-3.
+        bootSystem() mantém 0.02 após o boot — praticamente sem névoa.
+    -->
+    <a-scene embedded renderer="antialias: true; colorManagement: true;" fog="type: exponential; color: #000; density: 0.03;">
 
         <a-assets>
             <a-mixin id="window-base"
@@ -70,16 +81,28 @@
             </a-mixin>
         </a-assets>
 
+        <!--
+            FIX #A — Iluminação ambiente adicionada.
+            shader: standard exige luz para renderizar cor.
+            Sem ela toda geometria não-emissiva fica preta.
+        -->
+        <a-light type="ambient"     color="#0a1a2a" intensity="0.6"></a-light>
+        <a-light type="directional" color="#00D4FF" intensity="0.3" position="0 4 -2"></a-light>
+
         <a-entity id="reactor-core" position="0 1 -3.5">
             <a-sphere radius="0.15" color="#00D4FF" material="emissive: #00D4FF; emissiveIntensity: 2">
-                <a-light type="point" color="#00D4FF" intensity="0.8" distance="5"></a-light>
+                <a-light type="point" color="#00D4FF" intensity="1.2" distance="8"></a-light>
             </a-sphere>
         </a-entity>
 
-        <!--
-            CORREÇÃO #3 — Adicionado class="ghost-window" para o raycaster detectar hover/clique.
-            CORREÇÃO #2 — Adicionado <a-text id="nexus-display"> para JARVIS_AI.updateNexus() funcionar.
-        -->
+        <!-- ══════════════════════════════════════════════════════
+             MATRIZ 180° — 5 MONITORES (Arquitetura SBL)
+             MON-0  (centro):            Ação Pura / output
+             MON-1L/1R (laterais ±30°):  Diagnóstico / Root Lib
+             MON-2L/2R (periféricos ±55°): Data Stream / Clock ATC
+        ══════════════════════════════════════════════════════ -->
+
+        <!-- MON-0 | CENTRO — Ação Pura / JARVIS output -->
         <a-entity
             id="mon-0"
             class="ghost-window"
@@ -100,10 +123,95 @@
 
         </a-entity>
 
-        <a-sky color="#000"></a-sky>
+        <!-- MON-1L | LATERAL ESQUERDA — Diagnóstico / Logs -->
+        <a-entity
+            id="mon-1l"
+            class="ghost-window"
+            ghost-window="title: DIAGNOSTICO"
+            mixin="window-base"
+            position="-3.2 1.6 -2.8"
+            rotation="0 30 0">
+
+            <a-text
+                value="DIAGNOSTICO_LOG&#10;Sem eventos críticos."
+                color="#00D4FF"
+                width="3"
+                wrap-count="34"
+                position="-1.4 0.5 0.01"
+                align="left"
+                font="mozillavr">
+            </a-text>
+
+        </a-entity>
+
+        <!-- MON-1R | LATERAL DIREITA — Biblioteca de Root -->
+        <a-entity
+            id="mon-1r"
+            class="ghost-window"
+            ghost-window="title: ROOT_LIB"
+            mixin="window-base"
+            position="3.2 1.6 -2.8"
+            rotation="0 -30 0">
+
+            <a-text
+                value="ROOT_LIBRARY&#10;Referências técnicas."
+                color="#00D4FF"
+                width="3"
+                wrap-count="34"
+                position="-1.4 0.5 0.01"
+                align="left"
+                font="mozillavr">
+            </a-text>
+
+        </a-entity>
+
+        <!-- MON-2L | PERIFÉRICO ESQUERDO — Fluxo de Dados -->
+        <a-entity
+            id="mon-2l"
+            class="ghost-window"
+            ghost-window="title: DATA_STREAM"
+            mixin="window-base"
+            position="-5.8 1.6 -1.8"
+            rotation="0 55 0">
+
+            <a-text
+                value="DATA_STREAM&#10;Fluxo bruto ativo."
+                color="#00FF41"
+                width="3"
+                wrap-count="34"
+                position="-1.4 0.5 0.01"
+                align="left"
+                font="mozillavr">
+            </a-text>
+
+        </a-entity>
+
+        <!-- MON-2R | PERIFÉRICO DIREITO — Clock ATC -->
+        <a-entity
+            id="mon-2r"
+            class="ghost-window"
+            ghost-window="title: CLOCK_ATC"
+            mixin="window-base"
+            position="5.8 1.6 -1.8"
+            rotation="0 -55 0">
+
+            <a-text
+                id="clock-display"
+                value="CLOCK_ATC&#10;Sinal Estável."
+                color="#00FF41"
+                width="3"
+                wrap-count="34"
+                position="-1.4 0.5 0.01"
+                align="left"
+                font="mozillavr">
+            </a-text>
+
+        </a-entity>
+
+        <a-sky color="#000010"></a-sky>
 
         <a-entity id="particle-entity" position="0 2.25 -10"
-                  particle-system="preset: dust; color: #00D4FF; particleCount: 1200"></a-entity>
+                  particle-system="preset: dust; color: #00D4FF; particleCount: 800"></a-entity>
 
         <a-entity id="camera-rig">
             <a-entity camera id="main-camera" look-controls position="0 1.6 0">
@@ -113,19 +221,6 @@
 
     </a-scene>
 
-    <!--
-        CORREÇÃO #1 — js_sentinel_protocols.js carregado por último para evitar
-        conflito com as constantes já declaradas em kernel.js.
-        NOTA: após a limpeza do protocols.js (remoção do bloco duplicado
-        const SYSTEM_STATE / JARVIS_CONFIG / Kernel) essa ordem evita qualquer
-        redeclaração de const no mesmo escopo global.
-
-        CORREÇÃO #4 — js_sentinel_jarvis-voice.js carregado DEPOIS do kernel
-        para que JARVIS_CONFIG já exista quando VoiceCore for instanciado.
-        O VoiceCore.init() e VoiceListener.init() que estão no final do
-        jarvis-voice.js devem ser removidos daquele arquivo — a inicialização
-        já ocorre no window 'load' do kernel.js para evitar dupla chamada.
-    -->
     <script src="js_sentinel_jarvis-voice.js"></script>
     <script src="js_sentinel_protocols.js"></script>
 
@@ -141,36 +236,50 @@
                 btn.addEventListener('click', function() {
                     console.log("SENTINEL: Executando boot de soberania...");
 
-                    // Dispara a lógica oficial do motor XR
                     if (typeof bootSystem === 'function') {
                         bootSystem();
                     } else {
                         console.error("[SENTINEL] bootSystem não encontrado — verifique js_sentinel_engine-xr.js");
                     }
 
-                    // Transição visual
+                    // FIX #B — libera o loop de proximidade após o boot.
+                    // updateQuantumProximity em engine-xr deve verificar
+                    // window.SENTINEL_BOOTED antes de chamar object3D.scale.set(),
+                    // evitando cancelar a animação de entrada das ghost-windows.
+                    window.SENTINEL_BOOTED = true;
+
                     overlay.style.transition = 'opacity 1s ease, filter 1s ease';
                     overlay.style.opacity    = '0';
                     overlay.style.filter     = 'blur(20px)';
 
                     setTimeout(() => {
                         overlay.style.display = 'none';
-                        console.log("SENTINEL: Overlay purgado.");
+                        console.log("SENTINEL: Overlay purgado. Sistema operacional.");
                     }, 1000);
                 });
             }
 
-            // OVERRIDE DE EMERGÊNCIA PARA A TECLA 'J'
+            // OVERRIDE DE EMERGÊNCIA — TECLA 'J'
             window.addEventListener('keydown', function(e) {
                 if (e.key.toLowerCase() === 'j') {
                     if (typeof VoiceListener !== 'undefined') {
                         console.log("[JARVIS] Escuta ativa via teclado.");
                         VoiceListener.start();
                     } else {
-                        console.warn("[SENTINEL] VoiceListener indisponível — verifique js_sentinel_jarvis-voice.js");
+                        console.warn("[SENTINEL] VoiceListener indisponível.");
                     }
                 }
             });
+
+            // CLOCK ATC — atualiza mon-2r a cada segundo
+            setInterval(() => {
+                const clockEl = document.getElementById('clock-display');
+                if (!clockEl || !window.SENTINEL_BOOTED) return;
+                const now     = new Date();
+                const ts      = now.toTimeString().slice(0, 8);
+                const elapsed = Math.floor((Date.now() - SYSTEM_STATE.telemetry.startTime) / 1000);
+                clockEl.setAttribute('value', 'CLOCK_ATC\n' + ts + '\nSessão: ' + elapsed + 's');
+            }, 1000);
         });
     </script>
 </body>
