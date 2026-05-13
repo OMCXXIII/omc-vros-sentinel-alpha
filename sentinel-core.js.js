@@ -79,8 +79,18 @@ const JARVIS_CONFIG = {
 const SentinelKernel = {
     init: function() {
         console.log('%c[KERNEL] Iniciando protocolos de soberania...', 'color:#00D4FF;font-weight:bold;');
+        
         this.bindEvents();
         this.startTelemetry();
+
+        // CORREÇÃO CRÍTICA: Emite o boot após configurar os listeners
+        // Isso remove a "cegueira" do sistema liberando a renderização
+        setTimeout(() => {
+            if (window.SentinelBus) {
+                console.log('%c[KERNEL] Liberando barramento para BOOT:COMPLETE', 'color:#00FF41;');
+                window.SentinelBus.emit('boot:complete');
+            }
+        }, 500); 
     },
 
     bindEvents: function() {
@@ -102,9 +112,11 @@ const SentinelKernel = {
             localStorage.setItem('OMC_MISSION_LOCK', mission);
         });
 
+        // Auto-ativação do Gate de renderização
         window.SentinelBus.once('boot:complete', () => {
             window.SENTINEL_BOOTED = true;
-            console.log('%c[SYSTEM] Soberania confirmada. Boot concluído.', 'color:#00FF41;');
+            document.documentElement.classList.add('sentinel-active');
+            console.log('%c[SYSTEM] Soberania confirmada. Interface liberada.', 'color:#00FF41;font-weight:bold;');
         });
     },
 
@@ -120,7 +132,6 @@ const SentinelKernel = {
     },
 
     startTelemetry: function() {
-        // Ciclo de Telemetria e Deep Flow
         setInterval(() => {
             const now = Date.now();
             const elapsed = now - StateStore.get('telemetry.startTime');
@@ -163,6 +174,7 @@ window.addEventListener('load', () => {
     // Injeção de Segurança
     window.SYSTEM_STATE = StateStore; 
     
+    // Inicializa o Kernel
     SentinelKernel.init();
 
     // Sincronização com o Monitor de Clock ATC
@@ -177,7 +189,13 @@ window.addEventListener('load', () => {
         if (window.SentinelBus) {
             window.SentinelBus.emit('ui:clock-tick', { time: ts, elapsed: elapsed });
         }
-        clockEl.setAttribute('value', `CLOCK_ATC\n${ts}\nSessão: ${elapsed}s`);
+        
+        // Se for um elemento A-Frame use setAttribute, se for HTML use textContent
+        if (clockEl.tagName.toLowerCase().startsWith('a-')) {
+            clockEl.setAttribute('value', `CLOCK_ATC\n${ts}\nSESSÃO: ${elapsed}s`);
+        } else {
+            clockEl.textContent = `${ts} | ${elapsed}s`;
+        }
     }, 1000);
 });
 
