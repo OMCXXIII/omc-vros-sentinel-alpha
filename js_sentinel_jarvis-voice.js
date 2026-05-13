@@ -52,9 +52,9 @@ const VoiceCore = {
 
         const utter = new SpeechSynthesisUtterance(text);
 
-        utter.lang  = JARVIS_CONFIG.lang;
-        utter.pitch = 0.88;
-        utter.rate  = 1.0;
+        utter.lang   = JARVIS_CONFIG.lang;
+        utter.pitch  = 0.88;
+        utter.rate   = 1.0;
         utter.volume = 1;
 
         this.synth.speak(utter);
@@ -71,55 +71,31 @@ const VoiceCore = {
         osc.connect(gain);
         gain.connect(audioCtx.destination);
 
-        switch(type) {
+        switch (type) {
 
             case 'confirm':
 
                 osc.type = 'sine';
-
-                osc.frequency.setValueAtTime(
-                    880,
-                    audioCtx.currentTime
-                );
-
-                gain.gain.exponentialRampToValueAtTime(
-                    0.01,
-                    audioCtx.currentTime + 0.1
-                );
-
+                osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
                 break;
 
             case 'warning':
 
                 osc.type = 'square';
-
-                osc.frequency.setValueAtTime(
-                    220,
-                    audioCtx.currentTime
-                );
-
-                gain.gain.exponentialRampToValueAtTime(
-                    0.01,
-                    audioCtx.currentTime + 0.25
-                );
-
+                osc.frequency.setValueAtTime(220, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
                 break;
 
             case 'mission':
 
                 osc.type = 'triangle';
-
-                osc.frequency.setValueAtTime(
-                    1200,
-                    audioCtx.currentTime
-                );
-
-                gain.gain.exponentialRampToValueAtTime(
-                    0.01,
-                    audioCtx.currentTime + 0.15
-                );
-
+                osc.frequency.setValueAtTime(1200, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
                 break;
+
+            default:
+                gain.gain.setValueAtTime(0, audioCtx.currentTime);
         }
 
         osc.start();
@@ -217,12 +193,12 @@ const IntentProcessor = {
             action: (val) => {
 
                 const map = {
-                    "biometria": "1",
-                    "arquétipos": "2",
-                    "centro": "3",
-                    "reator": "3",
+                    "biometria":    "1",
+                    "arquétipos":   "2",
+                    "centro":       "3",
+                    "reator":       "3",
                     "mielinização": "4",
-                    "soberania": "5"
+                    "soberania":    "5"
                 };
 
                 const key = map[val] || val;
@@ -244,13 +220,10 @@ const IntentProcessor = {
             action: (val) => {
 
                 if (val.includes("sombra")) {
-                    toggleShadowMode();
+                    if (typeof toggleShadowMode === 'function') toggleShadowMode();
                 }
 
-                if (
-                    val.includes("repouso") &&
-                    typeof toggleSleepMode === 'function'
-                ) {
+                if (val.includes("repouso") && typeof toggleSleepMode === 'function') {
                     toggleSleepMode();
                 }
 
@@ -265,18 +238,13 @@ const IntentProcessor = {
 
         const text = transcript.toLowerCase();
 
-        console.log(
-            `[JARVIS] Analisando Intenção: "${text}"`
-        );
+        console.log(`[JARVIS] Analisando Intenção: "${text}"`);
 
         SYSTEM_STATE.telemetry.lastInput = Date.now();
 
         /* OVERRIDE */
 
-        if (
-            text.includes("override") ||
-            text.includes("omc override")
-        ) {
+        if (text.includes("override") || text.includes("omc override")) {
 
             executeOverrideProtocol();
             return;
@@ -284,58 +252,42 @@ const IntentProcessor = {
 
         /* MISSION LOCK */
 
-        if (
-            text.includes("mission") ||
-            text.includes("missão")
-        ) {
+        if (text.includes("mission") || text.includes("missão")) {
 
-            const mission =
-                transcript
-                    .replace(/omc/gi, "")
-                    .replace(/mission/gi, "")
-                    .replace(/missão/gi, "")
-                    .trim();
+            const mission = transcript
+                .replace(/omc/gi,    "")
+                .replace(/mission/gi, "")
+                .replace(/missão/gi,  "")
+                .trim();
 
             executeMissionProtocol(mission);
-
             return;
         }
 
         /* DEEP FLOW */
 
-        if (
-            text.includes("deep flow") ||
-            text.includes("flow")
-        ) {
+        if (text.includes("deep flow") || text.includes("flow")) {
 
             activateDeepFlowProtocol();
-
             return;
         }
 
         /* FOCUS MODE */
 
-        if (
-            text.includes("focus") ||
-            text.includes("foco")
-        ) {
+        if (text.includes("focus") || text.includes("foco")) {
 
             activateFocusProtocol();
-
             return;
         }
 
+        /* DICTIONARY DISPATCH */
+
         for (const [category, obj] of Object.entries(this.dictionary)) {
 
-            if (
-                obj.patterns.some(p => text.includes(p))
-            ) {
+            if (obj.patterns.some(p => text.includes(p))) {
 
-                const target =
-                    text.split(" ").pop();
-
+                const target = text.split(" ").pop();
                 this.executeAction(category, target);
-
                 return;
             }
         }
@@ -348,7 +300,6 @@ const IntentProcessor = {
         if (this.dictionary[category]) {
 
             this.dictionary[category].action(value);
-
             VoiceCore.playFeedback('confirm');
         }
     }
@@ -368,34 +319,26 @@ const JARVIS_AI = {
 
         /* IDENTIDADE */
 
-        if (
-            lowerPrompt.includes("quem é você")
-        ) {
+        if (lowerPrompt.includes("quem é você")) {
 
             const reply =
                 `Sou o Sentinel v6.0. Motor de execução do SBL. Latência atual: ${SYSTEM_STATE.telemetry.latency}s.`;
 
             VoiceCore.speak(reply);
-
             this.updateNexus(reply);
-
             return;
         }
 
         /* RAG */
 
-        const ragResult =
-            RAG_ENGINE.retrieve(lowerPrompt);
+        const ragResult = RAG_ENGINE.retrieve(lowerPrompt);
 
         if (ragResult) {
 
-            const reply =
-                `[PATCH]: ${ragResult.patch} | Fonte: ${ragResult.fonte}`;
+            const reply = `[PATCH]: ${ragResult.patch} | Fonte: ${ragResult.fonte}`;
 
             VoiceCore.speak(reply);
-
             this.updateNexus(reply);
-
             return;
         }
 
@@ -405,21 +348,16 @@ const JARVIS_AI = {
             "Positivo. Diretriz de Soberania confirmada. Execute o protocolo de sessenta segundos agora.";
 
         VoiceCore.speak(defaultReply);
-
         this.updateNexus(defaultReply);
     },
 
     updateNexus(text) {
 
-        const nexus =
-            document.getElementById('nexus-display');
+        const nexus = document.getElementById('nexus-display');
 
         if (nexus) {
 
-            nexus.setAttribute(
-                'value',
-                `IA_REPLY:\n${text}`
-            );
+            nexus.setAttribute('value', `IA_REPLY:\n${text}`);
         }
     }
 };
@@ -433,7 +371,7 @@ const JARVIS_AI = {
 const VoiceListener = {
 
     recognition: null,
-    isListening: false,
+    isListening:  false,
 
     init: function() {
 
@@ -443,66 +381,52 @@ const VoiceListener = {
 
         if (!SpeechRecognition) {
 
-            console.warn(
-                "[JARVIS] SpeechRecognition indisponível."
-            );
-
+            console.warn("[JARVIS] SpeechRecognition indisponível neste browser.");
             return;
         }
 
-        this.recognition =
-            new SpeechRecognition();
+        this.recognition = new SpeechRecognition();
 
-        this.recognition.lang =
-            JARVIS_CONFIG.lang;
-
-        this.recognition.continuous = false;
-
-        this.recognition.interimResults = false;
+        this.recognition.lang            = JARVIS_CONFIG.lang;
+        this.recognition.continuous      = false;
+        this.recognition.interimResults  = false;
 
         this.recognition.onstart = () => {
 
             this.isListening = true;
-
-            document.body.classList.add(
-                'jarvis-listening'
-            );
-
+            document.body.classList.add('jarvis-listening');
             VoiceCore.playFeedback('confirm');
         };
 
         this.recognition.onresult = (event) => {
 
-            const transcript =
-                event.results[0][0].transcript;
-
+            const transcript = event.results[0][0].transcript;
             IntentProcessor.parse(transcript);
         };
 
-        this.recognition.onerror = () => {
+        this.recognition.onerror = (event) => {
 
+            console.warn(`[JARVIS] Erro de reconhecimento: ${event.error}`);
             this.isListening = false;
-
-            document.body.classList.remove(
-                'jarvis-listening'
-            );
+            document.body.classList.remove('jarvis-listening');
         };
 
         this.recognition.onend = () => {
 
             this.isListening = false;
-
-            document.body.classList.remove(
-                'jarvis-listening'
-            );
+            document.body.classList.remove('jarvis-listening');
         };
     },
 
     start: function() {
 
-        if (!this.isListening) {
+        if (this.recognition && !this.isListening) {
 
             this.recognition.start();
+
+        } else if (!this.recognition) {
+
+            console.warn("[JARVIS] VoiceListener não inicializado.");
         }
     }
 };
@@ -515,41 +439,26 @@ const VoiceListener = {
 
 function executeOverrideProtocol() {
 
-    VoiceCore.speak(
-        "Protocolo Override ativo. Purgando distrações."
-    );
-
+    VoiceCore.speak("Protocolo Override ativo. Purgando distrações.");
     VoiceCore.playFeedback('warning');
 
-    toggleShadowMode();
+    if (typeof toggleShadowMode === 'function') toggleShadowMode();
 
     SYSTEM_STATE.telemetry.lastInput = Date.now();
-
-    SYSTEM_STATE.ops.override = true;
+    SYSTEM_STATE.ops.override        = true;
 
     document.body.classList.add('system-glitch');
-
     document.body.classList.add('override-active');
 
-    const mainMonitor =
-        document.getElementById('mon-0');
+    const mainMonitor = document.getElementById('mon-0');
 
     if (mainMonitor) {
 
-        mainMonitor.setAttribute(
-            'material',
-            'emissiveIntensity',
-            '1'
-        );
-
-        mainMonitor.setAttribute(
-            'material',
-            'emissive',
-            '#FF4B00'
-        );
+        mainMonitor.setAttribute('material', 'emissiveIntensity', '1');
+        mainMonitor.setAttribute('material', 'emissive', '#FF4B00');
     }
 
-    isolateAttentionField();
+    if (typeof isolateAttentionField === 'function') isolateAttentionField();
 }
 
 /**
@@ -562,34 +471,23 @@ function executeMissionProtocol(mission) {
 
     if (!mission || mission.length < 2) {
 
-        VoiceCore.speak(
-            "Missão inválida."
-        );
-
+        VoiceCore.speak("Missão inválida.");
         return;
     }
 
     SYSTEM_STATE.ops.mission = mission;
 
-    localStorage.setItem(
-        'OMC_MISSION_LOCK',
-        mission
-    );
+    localStorage.setItem('OMC_MISSION_LOCK', mission);
 
-    const missionEl =
-        document.getElementById('mission-lock');
+    const missionEl = document.getElementById('mission-lock');
 
     if (missionEl) {
 
-        missionEl.innerText =
-            `MISSION: ${mission.toUpperCase()}`;
+        missionEl.innerText = `MISSION: ${mission.toUpperCase()}`;
     }
 
     VoiceCore.playFeedback('mission');
-
-    VoiceCore.speak(
-        `Missão fixada. Objetivo principal: ${mission}`
-    );
+    VoiceCore.speak(`Missão fixada. Objetivo principal: ${mission}`);
 }
 
 /**
@@ -602,25 +500,17 @@ function activateFocusProtocol() {
 
     document.body.classList.add('focus-clipping');
 
-    const windows =
-        document.querySelectorAll('.ghost-window');
-
-    windows.forEach((windowEl, index) => {
+    document.querySelectorAll('.ghost-window').forEach((windowEl, index) => {
 
         if (index > 0) {
 
-            windowEl.style.opacity = '0.05';
-
-            windowEl.style.filter =
-                'blur(6px) grayscale(1)';
-
+            windowEl.style.opacity       = '0.05';
+            windowEl.style.filter        = 'blur(6px) grayscale(1)';
             windowEl.style.pointerEvents = 'none';
         }
     });
 
-    VoiceCore.speak(
-        "Focus Clipping ativado."
-    );
+    VoiceCore.speak("Focus Clipping ativado.");
 }
 
 /**
@@ -634,26 +524,14 @@ function activateDeepFlowProtocol() {
 
     document.body.classList.add('ene-active');
 
-    VoiceCore.speak(
-        "Deep Flow operacional."
-    );
+    VoiceCore.speak("Deep Flow operacional.");
 
-    const monitor =
-        document.getElementById('mon-0');
+    const monitor = document.getElementById('mon-0');
 
     if (monitor) {
 
-        monitor.setAttribute(
-            'material',
-            'emissive',
-            '#00FF41'
-        );
-
-        monitor.setAttribute(
-            'material',
-            'emissiveIntensity',
-            '0.9'
-        );
+        monitor.setAttribute('material', 'emissive',          '#00FF41');
+        monitor.setAttribute('material', 'emissiveIntensity', '0.9');
     }
 }
 
@@ -664,18 +542,12 @@ function activateDeepFlowProtocol() {
 
 function isolateAttentionField() {
 
-    const windows =
-        document.querySelectorAll('.ghost-window');
-
-    windows.forEach((windowEl, index) => {
+    document.querySelectorAll('.ghost-window').forEach((windowEl, index) => {
 
         if (index > 0) {
 
-            windowEl.style.opacity = '0.02';
-
-            windowEl.style.filter =
-                'blur(10px) grayscale(1)';
-
+            windowEl.style.opacity       = '0.02';
+            windowEl.style.filter        = 'blur(10px) grayscale(1)';
             windowEl.style.pointerEvents = 'none';
         }
     });
@@ -688,38 +560,26 @@ function isolateAttentionField() {
 
 window.addEventListener('load', () => {
 
-    const savedMission =
-        localStorage.getItem('OMC_MISSION_LOCK');
+    const savedMission = localStorage.getItem('OMC_MISSION_LOCK');
 
     if (savedMission) {
 
         SYSTEM_STATE.ops.mission = savedMission;
 
-        const missionEl =
-            document.getElementById('mission-lock');
+        const missionEl = document.getElementById('mission-lock');
 
         if (missionEl) {
 
-            missionEl.innerText =
-                `MISSION: ${savedMission.toUpperCase()}`;
+            missionEl.innerText = `MISSION: ${savedMission.toUpperCase()}`;
         }
     }
 });
 
-/**
- * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- * INITIALIZATION
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-
-VoiceCore.init();
-
-VoiceListener.init();
-
-if (typeof updateDynamicFeeds === 'function') {
-    updateDynamicFeeds();
-}
-
 /* ═══════════════════════════════════════════════════════════════════════════
    SENTINEL JARVIS-VOICE v6.0
    ROOT AUTHORITY ENABLED
+
+   NOTA: VoiceCore.init() e VoiceListener.init() NÃO são chamados aqui.
+   A inicialização ocorre no window 'load' de js_sentinel_kernel.js
+   para evitar dupla execução (Correção #4).
 ═══════════════════════════════════════════════════════════════════════════ */
