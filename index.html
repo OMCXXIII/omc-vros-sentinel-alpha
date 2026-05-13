@@ -15,9 +15,14 @@
         }
     </script>
 
+    <!-- ── CORREÇÃO: A-Frame deve carregar ANTES de qualquer script que use AFRAME.registerComponent ── -->
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <script src="https://unpkg.com/aframe-event-set-component@5.0.0/dist/aframe-event-set-component.min.js"></script>
     <script src="https://unpkg.com/aframe-particle-system-component@1.0.x/dist/aframe-particle-system-component.min.js"></script>
+
+    <!-- ── CORREÇÃO: engine-xr registra o componente ghost-window — deve vir ANTES da cena A-Frame ── -->
+    <script src="js_sentinel_kernel.js"></script>
+    <script src="js_sentinel_engine-xr.js"></script>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
@@ -57,10 +62,10 @@
     </div>
 
     <a-scene embedded renderer="antialias: true; colorManagement: true;" fog="type: exponential; color: #000; density: 0.12;">
-        
+
         <a-assets>
-            <a-mixin id="window-base" 
-                     geometry="primitive: plane; width: 3.2; height: 1.8" 
+            <a-mixin id="window-base"
+                     geometry="primitive: plane; width: 3.2; height: 1.8"
                      material="shader: standard; transparent: true; opacity: 0.2; side: double; emissive: #00D4FF; emissiveIntensity: 0.15">
             </a-mixin>
         </a-assets>
@@ -71,11 +76,33 @@
             </a-sphere>
         </a-entity>
 
-        <a-entity id="mon-0" ghost-window="title: CORE_TERMINAL" mixin="window-base" position="0 1.6 -3"></a-entity>
+        <!--
+            CORREÇÃO #3 — Adicionado class="ghost-window" para o raycaster detectar hover/clique.
+            CORREÇÃO #2 — Adicionado <a-text id="nexus-display"> para JARVIS_AI.updateNexus() funcionar.
+        -->
+        <a-entity
+            id="mon-0"
+            class="ghost-window"
+            ghost-window="title: CORE_TERMINAL"
+            mixin="window-base"
+            position="0 1.6 -3">
+
+            <a-text
+                id="nexus-display"
+                value="SENTINEL ONLINE&#10;AGUARDANDO INPUT..."
+                color="#00D4FF"
+                width="3"
+                wrap-count="38"
+                position="-1.4 0.5 0.01"
+                align="left"
+                font="mozillavr">
+            </a-text>
+
+        </a-entity>
 
         <a-sky color="#000"></a-sky>
-        
-        <a-entity id="particle-entity" position="0 2.25 -10" 
+
+        <a-entity id="particle-entity" position="0 2.25 -10"
                   particle-system="preset: dust; color: #00D4FF; particleCount: 1200"></a-entity>
 
         <a-entity id="camera-rig">
@@ -86,9 +113,20 @@
 
     </a-scene>
 
-    <script src="js_sentinel_kernel.js"></script>
+    <!--
+        CORREÇÃO #1 — js_sentinel_protocols.js carregado por último para evitar
+        conflito com as constantes já declaradas em kernel.js.
+        NOTA: após a limpeza do protocols.js (remoção do bloco duplicado
+        const SYSTEM_STATE / JARVIS_CONFIG / Kernel) essa ordem evita qualquer
+        redeclaração de const no mesmo escopo global.
+
+        CORREÇÃO #4 — js_sentinel_jarvis-voice.js carregado DEPOIS do kernel
+        para que JARVIS_CONFIG já exista quando VoiceCore for instanciado.
+        O VoiceCore.init() e VoiceListener.init() que estão no final do
+        jarvis-voice.js devem ser removidos daquele arquivo — a inicialização
+        já ocorre no window 'load' do kernel.js para evitar dupla chamada.
+    -->
     <script src="js_sentinel_jarvis-voice.js"></script>
-    <script src="js_sentinel_engine-xr.js"></script>
     <script src="js_sentinel_protocols.js"></script>
 
     <script>
@@ -96,23 +134,25 @@
            PROTOCOLO DE INICIALIZAÇÃO E SOBERANIA
         ════════════════════════════════════════════════════════ */
         document.addEventListener('DOMContentLoaded', function() {
-            const btn = document.getElementById('master-boot-trigger');
+            const btn     = document.getElementById('master-boot-trigger');
             const overlay = document.getElementById('onboarding-overlay');
 
             if (btn) {
                 btn.addEventListener('click', function() {
                     console.log("SENTINEL: Executando boot de soberania...");
-                    
+
                     // Dispara a lógica oficial do motor XR
                     if (typeof bootSystem === 'function') {
                         bootSystem();
+                    } else {
+                        console.error("[SENTINEL] bootSystem não encontrado — verifique js_sentinel_engine-xr.js");
                     }
-                    
-                    // Transição visual forçada para garantir saída da tela
+
+                    // Transição visual
                     overlay.style.transition = 'opacity 1s ease, filter 1s ease';
-                    overlay.style.opacity = '0';
-                    overlay.style.filter = 'blur(20px)';
-                    
+                    overlay.style.opacity    = '0';
+                    overlay.style.filter     = 'blur(20px)';
+
                     setTimeout(() => {
                         overlay.style.display = 'none';
                         console.log("SENTINEL: Overlay purgado.");
@@ -126,6 +166,8 @@
                     if (typeof VoiceListener !== 'undefined') {
                         console.log("[JARVIS] Escuta ativa via teclado.");
                         VoiceListener.start();
+                    } else {
+                        console.warn("[SENTINEL] VoiceListener indisponível — verifique js_sentinel_jarvis-voice.js");
                     }
                 }
             });
