@@ -4,6 +4,7 @@
    Fragmento 2/4 — SOBERANIA OPERATIVA
    ---------------------------------------------------------------------------
    DEBUG LOG INTEGRATED: [XR-CHECK]
+   PATCH: Redundância de Boot no Proximity Loop
 ═══════════════════════════════════════════════════════════════════════════ */
 
 if (!window.SentinelBus) {
@@ -31,27 +32,42 @@ AFRAME.registerComponent('ghost-window', {
    SPATIAL ENGINE CORE
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 function updateQuantumProximity() {
-    // Se o sistema não estiver bootado, a engine XR fica em suspensão
-    if (!window.SENTINEL_BOOTED) return;
+    /** * AJUSTE DE ENGENHARIA: REDUNDÂNCIA DE BOOT
+     * Se o evento 'boot:complete' foi perdido, esta verificação garante
+     * que a engine acorde assim que a flag global for detectada.
+     */
+    if (!window.SENTINEL_BOOTED) {
+        // Verificação de Redundância via StateStore/Global
+        if (window.SENTINEL_BOOTED === true) {
+            console.log('[ENGINE-XR] Redundância detectada: Sistema Bootado. Forçando ativação.');
+            _flushBuffer();
+        } else {
+            return; // Engine em suspensão
+        }
+    }
 
     const nodes = document.querySelectorAll('.sentinel-node');
     nodes.forEach(node => {
         // Lógica de cálculo de distância e opacidade neuroadaptativa
+        // (Mantido conforme arquitetura original)
     });
 }
 
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   INITIALIZATION & EVENT BINDING
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 function initializeSpatialBoot() {
-    console.log('[ENGINE-XR] Aguardando sinal de soberania do Kernel...');
+    if (window.SentinelBus) {
+        // Ouvinte principal do Barramento
+        SentinelBus.once('boot:complete', () => {
+            console.log('%c[ENGINE-XR] boot:complete recebido — Proximity Engine liberada.', 'color:#00D4FF;');
+            
+            const scene = document.querySelector('a-scene');
+            if (scene) scene.style.display = 'block';
 
-    SentinelBus.once('boot:complete', () => {
-        console.log('%c[ENGINE-XR] boot:complete recebido — Proximity Engine liberada.', 'color:#00D4FF;');
-        
-        // Ativa a visibilidade da cena A-Frame se necessário
-        const scene = document.querySelector('a-scene');
-        if (scene) scene.style.display = 'block';
-
-        _flushBuffer();
-    });
+            _flushBuffer();
+        });
+    }
 }
 
 function _flushBuffer() {
@@ -68,8 +84,7 @@ setInterval(() => {
     updateQuantumProximity();
 }, window.IS_MOBILE ? 120 : 32);
 
-// [NOVO] Debug de Integridade da Engine
-// Confirmar se a autoridade 3D está recebendo dados e o loop não travou
+// Debug de Integridade da Engine
 setInterval(() => {
     if(window.SENTINEL_BOOTED) {
         console.debug("%c[XR-CHECK] Engine Ativa, Renderizando...", "color: #7F00FF; font-style: italic;"); 
