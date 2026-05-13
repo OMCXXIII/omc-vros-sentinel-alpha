@@ -25,8 +25,7 @@
     <script src="https://unpkg.com/aframe-particle-system-component@1.0.x/dist/aframe-particle-system-component.min.js"></script>
 
     <script src="sentinel-bus.js"></script>
-    <script src="sentinel-core.js"></script> 
-    <script src="js_sentinel_engine-xr.js"></script>
+    <script src="sentinel-core.js"></script> <script src="sentinel-debug-hud.js"></script> <script src="js_sentinel_engine-xr.js"></script>
     <script src="js_sentinel_jarvis-voice.js"></script>
     <script src="js_sentinel_protocols.js"></script>
 
@@ -85,28 +84,14 @@
         </a-entity>
 
         <a-entity id="mon-0" class="ghost-window" ghost-window="title: CORE_TERMINAL" mixin="window-base" position="0 1.6 -3">
-            <a-text id="nexus-display" value="SENTINEL ONLINE\nAGUARDANDO INPUT..." color="#00D4FF" width="3" wrap-count="38" position="-1.4 0.5 0.01" align="left" font="mozillavr"></a-text>
-        </a-entity>
-
-        <a-entity id="mon-1l" class="ghost-window" ghost-window="title: DIAGNOSTICO" mixin="window-base" position="-3.2 1.6 -2.8" rotation="0 30 0">
-            <a-text value="DIAGNOSTICO_LOG\nSem eventos críticos." color="#00D4FF" width="3" wrap-count="34" position="-1.4 0.5 0.01" align="left" font="mozillavr"></a-text>
-        </a-entity>
-
-        <a-entity id="mon-1r" class="ghost-window" ghost-window="title: ROOT_LIB" mixin="window-base" position="3.2 1.6 -2.8" rotation="0 -30 0">
-            <a-text value="ROOT_LIBRARY\nReferências técnicas." color="#00D4FF" width="3" wrap-count="34" position="-1.4 0.5 0.01" align="left" font="mozillavr"></a-text>
-        </a-entity>
-
-        <a-entity id="mon-2l" class="ghost-window" ghost-window="title: DATA_STREAM" mixin="window-base" position="-5.8 1.6 -1.8" rotation="0 55 0">
-            <a-text value="DATA_STREAM\nFluxo bruto ativo." color="#00FF41" width="3" wrap-count="34" position="-1.4 0.5 0.01" align="left" font="mozillavr"></a-text>
+            <a-text id="nexus-display" value="SENTINEL ONLINE\nAGUARDANDO BOOT..." color="#00D4FF" width="3" wrap-count="38" position="-1.4 0.5 0.01" align="left" font="mozillavr"></a-text>
         </a-entity>
 
         <a-entity id="mon-2r" class="ghost-window" ghost-window="title: CLOCK_ATC" mixin="window-base" position="5.8 1.6 -1.8" rotation="0 -55 0">
-            <a-text id="clock-display" value="CLOCK_ATC\nSinal Estável." color="#00FF41" width="3" wrap-count="34" position="-1.4 0.5 0.01" align="left" font="mozillavr"></a-text>
+            <a-text id="clock-display" value="CLOCK_ATC\nSTANDBY" color="#00FF41" width="3" wrap-count="34" position="-1.4 0.5 0.01" align="left" font="mozillavr"></a-text>
         </a-entity>
 
         <a-sky color="#000010"></a-sky>
-        <a-entity id="particle-entity" position="0 2.25 -10" particle-system="preset: dust; color: #00D4FF; particleCount: 800"></a-entity>
-
         <a-entity id="camera-rig">
             <a-entity camera id="main-camera" look-controls position="0 1.6 0">
                 <a-cursor color="#00D4FF" fuse="false" raycaster="objects: .ghost-window"></a-cursor>
@@ -121,70 +106,42 @@
 
             if (btn) {
                 btn.addEventListener('click', function() {
-                    console.log("SENTINEL: Executando boot de soberania...");
+                    console.log("[SYSTEM] Iniciando sequência de boot...");
 
-                    // 1. Notifica o Barramento que o Boot ocorreu (Libera Jarvis e Engine)
+                    // 1. Emite o evento central de Boot
                     if (window.SentinelBus) {
                         window.SentinelBus.emit('boot:complete', { timestamp: Date.now() });
                     }
 
-                    // 2. Chama inicialização do Engine-XR se existir
-                    if (typeof bootSystem === 'function') {
-                        bootSystem();
-                    }
-
-                    // 3. Atualiza estado global
+                    // 2. Atualiza flags e classes visuais
                     window.SENTINEL_BOOTED = true;
                     document.body.classList.remove('system-idle');
                     document.body.classList.add('system-ready');
 
-                    // 4. Efeito visual de saída
-                    overlay.style.transition = 'opacity 1s ease, filter 1s ease, visibility 1s';
+                    // 3. Transição de Saída do Overlay
+                    overlay.style.transition = 'opacity 1s ease, filter 1s ease';
                     overlay.style.opacity    = '0';
                     overlay.style.filter     = 'blur(20px)';
                     overlay.style.pointerEvents = 'none';
 
-                    setTimeout(() => {
-                        overlay.style.display = 'none';
-                        console.log("SENTINEL: Overlay purgado. Interface XR liberada.");
-                    }, 1000);
+                    setTimeout(() => { overlay.style.display = 'none'; }, 1000);
                 });
             }
 
-            // ATALHOS DE TECLADO OPERACIONAIS
-            window.addEventListener('keydown', function(e) {
-                // Tecla 'J' - Ativa Jarvis VoiceListener
-                if (e.key.toLowerCase() === 'j') {
-                    if (typeof VoiceListener !== 'undefined') {
-                        VoiceListener.start();
-                        console.log("[INPUT] VoiceListener ativado via Teclado.");
-                    }
+            // ATALHOS DE TECLADO
+            window.addEventListener('keydown', (e) => {
+                if (e.key.toLowerCase() === 'j' && typeof VoiceListener !== 'undefined') {
+                    VoiceListener.start();
                 }
+                // Dispara sinal de atividade para o Barramento (reseta idle)
+                window.SentinelBus?.emit('telemetry:input');
             });
 
-            // LOOP DE TELEMETRIA (CLOCK ATC & SESSION)
-            setInterval(() => {
-                const clockEl = document.getElementById('clock-display');
-                if (!clockEl || !window.SENTINEL_BOOTED) return;
-                
-                const now = new Date();
-                const ts = now.toTimeString().slice(0, 8);
-                
-                // Cálculo de tempo de sessão via StateStore (sentinel-core)
-                let elapsed = 0;
-                if (typeof StateStore !== 'undefined') {
-                    const startTime = StateStore.get('telemetry.startTime');
-                    elapsed = Math.floor((Date.now() - startTime) / 1000);
-                }
-                    
-                clockEl.setAttribute('value', `CLOCK_ATC\n${ts}\nSessão: ${elapsed}s`);
-                
-                // Sincroniza HUD 2D de Latência (Exemplo de interface cruzada)
-                const latEl = document.getElementById('latency-value');
-                if(latEl && typeof StateStore !== 'undefined') {
-                    latEl.textContent = StateStore.get('ops.latency') || '0.0ms';
-                }
-            }, 1000);
+            /* NOTA TÉCNICA: O setInterval de telemetria anterior foi removido.
+               A atualização do clock-display e nexus-display agora é tratada 
+               pelos ouvintes dentro de 'sentinel-core.js' e 'js_sentinel_protocols.js',
+               evitando concorrência de processamento.
+            */
         });
     </script>
 </body>
