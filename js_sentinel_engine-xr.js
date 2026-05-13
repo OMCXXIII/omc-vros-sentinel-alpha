@@ -307,11 +307,16 @@ function updateQuantumProximity() {
             emissive
         );
 
-        win.object3D.scale.set(
-            scaleBoost,
-            scaleBoost,
-            scaleBoost
-        );
+        /* FIX #B — só manipula escala após boot completar.
+           Antes do boot, object3D.scale estava sendo sobrescrito
+           a cada 32ms, cancelando a animação de entrada (0.001→1). */
+        if (window.SENTINEL_BOOTED) {
+            win.object3D.scale.set(
+                scaleBoost,
+                scaleBoost,
+                scaleBoost
+            );
+        }
 
         /* MODO SHADOW */
 
