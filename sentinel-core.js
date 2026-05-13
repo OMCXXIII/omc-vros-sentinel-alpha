@@ -1,119 +1,106 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   OMC VR-OS | SENTINEL CORE — UNIFIED AUTHORITY v6.5 (REFACTORED)
-   Soberania Operativa: ISOLAMENTO DE KERNEL + REDUNDÂNCIA STATEVAULT
-   Arquitetura: Cognitive Modular Architecture (CMA)
+   OMC VR-OS | SENTINEL CORE — UNIFIED AUTHORITY v6.6
+   Soberania Operativa: ISOLAMENTO DE KERNEL + EXPOSIÇÃO STATESTORE
    Domínio: CORE / ABSOLUTE
 ═══════════════════════════════════════════════════════════════════════════ */
 
-/**
- * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- * SECTION 01: STATEVAULT (Redundância em Camadas)
- * L1: Memória (Velocidade) | L2: LocalStorage (Persistência)
- * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-const StateVault = (() => {
+const StateStore = (() => {
     const MIRROR_KEY = 'SENTINEL_STATE_MIRROR';
     
-    // Estado Inicial / Fallback
     let _state = {
         ui: { isSleep: false, isShadow: false, isLocked: false, isFocusMode: false, isEmergency: false, isListening: false },
-        ops: { profile: 'ALPHA', buffer: '', deepFlow: false, override: false, mission: 'IDLE', latency: '0ms' },
+        ops: { profile: 'ALPHA', buffer: '', deepFlow: false, override: false, mission: 'IDLE', latency: '0.0ms' },
         telemetry: { startTime: Date.now(), lastInput: Date.now(), cycles: 0, neuroSync: 100 }
     };
 
-    // Protocolo de Recuperação L2 -> L1
     const _hydrate = () => {
         try {
             const backup = localStorage.getItem(MIRROR_KEY);
             if (backup) {
                 const parsed = JSON.parse(backup);
                 _state = { ..._state, ...parsed };
-                console.log('%c[VAULT] L2 Mirror Restored.', 'color: #00FF41;');
             }
-        } catch (e) {
-            console.warn('[VAULT] Erro na hidratação de dados. Usando estado virgem.');
-        }
+        } catch (e) { console.warn('[CORE] Falha na hidratação de redundância.'); }
     };
 
     _hydrate();
 
     return {
-        get: (path) => path.split('.').reduce((obj, key) => obj && obj[key], _state),
+        get: (path) => {
+            return path.split('.').reduce((obj, key) => obj?.[key], _state);
+        },
         set: (path, value) => {
             const keys = path.split('.');
-            const lastKey = keys.pop();
-            const target = keys.reduce((obj, key) => obj[key], _state);
-            
-            if (target && lastKey in target) {
-                target[lastKey] = value;
-                
-                // Redundância Seletiva (Apenas dados críticos para L2)
-                if (path.includes('ops') || path.includes('mission')) {
-                    localStorage.setItem(MIRROR_KEY, JSON.stringify(_state));
-                }
-
-                // Desacoplamento via Bus
-                window.SentinelBus?.emit('state:updated', { path, value });
+            let last = _state;
+            for (let i = 0; i < keys.length - 1; i++) {
+                last = last[keys[i]];
             }
-        }
+            last[keys[keys.length - 1]] = value;
+            
+            // Persistência Seletiva (L2)
+            if(path.startsWith('ops') || path.startsWith('mission')) {
+                localStorage.setItem(MIRROR_KEY, JSON.stringify(_state));
+            }
+            
+            window.SentinelBus?.emit('state:changed', { path, value });
+        },
+        all: () => ({ ..._state })
     };
 })();
 
-/**
- * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- * SECTION 02: SENTINEL KERNEL (The Watchdog)
- * Isolado de dados, focado apenas em Ciclo de Vida e Saúde do Sistema.
- * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-const SentinelKernel = {
-    init: function() {
-        console.log('%c[KERNEL] Inicializando Watchdog de Soberania...', 'color: #00D4FF;');
-        this._setupListeners();
-        this._startHeartbeat();
-    },
+// Exposição Global conforme esperado pelos módulos (engine-xr, jarvis, etc)
+window.StateStore = StateStore;
+window.SYSTEM_STATE = StateStore; // Legado/Redundância
 
-    _setupListeners: function() {
-        // O Kernel apenas ouve ordens de alto nível
-        window.SentinelBus?.on('system:reboot', () => window.location.reload());
+const SentinelKernel = (() => {
+    const init = () => {
+        console.log('%c[KERNEL] Iniciando Soberania Operativa...', 'color: #7F00FF; font-weight: bold;');
+        _bindEvents();
+        _startHeartbeat();
         
-        window.SentinelBus?.on('telemetry:input', () => {
-            StateVault.set('telemetry.lastInput', Date.now());
-        });
-    },
-
-    _startHeartbeat: function() {
-        // Monitor de Latência e Ciclos (Estética da Eficiência)
-        setInterval(() => {
-            const cycles = StateVault.get('telemetry.cycles') || 0;
-            StateVault.set('telemetry.cycles', cycles + 1);
-            
-            // Check de Integridade
+        // Timeout de segurança para garantir o boot se o A-Frame demorar
+        setTimeout(() => {
             if (!window.SENTINEL_BOOTED) {
-                console.debug('[KERNEL] Aguardando sinal de BOOT_COMPLETE...');
+                window.SENTINEL_BOOTED = true;
+                window.SentinelBus?.emit('boot:complete');
             }
-        }, 5000);
-    }
-};
-
-/**
- * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- * SECTION 03: EXECUTION GATEWAY
- * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-window.addEventListener('load', () => {
-    // Injeção de Dependência
-    window.SYSTEM_STATE = StateVault;
-    
-    // Boot do Kernel Isolado
-    SentinelKernel.init();
-
-    // Loop de Telemetria (Renderização Desacoplada)
-    const updateUI = () => {
-        if (window.SENTINEL_BOOTED) {
-            const now = new Date();
-            const ts = now.toTimeString().slice(0, 8);
-            const elapsed = Math.floor((Date.now() - StateVault.get('telemetry.startTime')) / 1000);
-            
-            window.SentinelBus?.emit('ui:clock-tick', { time: ts, elapsed });
-        }
-        requestAnimationFrame(updateUI);
+        }, 2000);
     };
-    updateUI();
+
+    const _bindEvents = () => {
+        if (!window.SentinelBus) return;
+
+        // PONTE DE DADOS: Nexus -> DOM (A-Frame)
+        window.SentinelBus.on('ui:nexus-update', (data) => {
+            const display = document.getElementById('nexus-display');
+            if (display) {
+                display.setAttribute('value', data.string || data);
+            }
+        });
+
+        window.SentinelBus.on('telemetry:input', () => {
+            StateStore.set('telemetry.lastInput', Date.now());
+        });
+    };
+
+    const _startHeartbeat = () => {
+        setInterval(() => {
+            const cycles = StateStore.get('telemetry.cycles') || 0;
+            StateStore.set('telemetry.cycles', cycles + 1);
+            
+            if (window.SENTINEL_BOOTED) {
+                const now = new Date();
+                const ts = now.toTimeString().slice(0, 8);
+                const elapsed = Math.floor((Date.now() - StateStore.get('telemetry.startTime')) / 1000);
+                
+                window.SentinelBus?.emit('ui:clock-tick', { time: ts, elapsed: elapsed });
+            }
+        }, 1000);
+    };
+
+    return { init };
+})();
+
+window.addEventListener('load', () => {
+    SentinelKernel.init();
 });
